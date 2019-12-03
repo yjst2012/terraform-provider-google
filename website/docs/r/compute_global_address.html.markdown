@@ -12,6 +12,7 @@
 #     .github/CONTRIBUTING.md.
 #
 # ----------------------------------------------------------------------------
+subcategory: "Compute Engine"
 layout: "google"
 page_title: "Google: google_compute_global_address"
 sidebar_current: "docs-google-compute-global-address"
@@ -79,11 +80,30 @@ The following arguments are supported:
   The IP Version that will be used by this address. Valid options are
   `IPV4` or `IPV6`. The default value is `IPV4`.
 
+* `prefix_length` -
+  (Optional)
+  The prefix length of the IP range. If not present, it means the
+  address field is a single IP address.
+  This field is not applicable to addresses with addressType=EXTERNAL.
+
 * `address_type` -
   (Optional)
   The type of the address to reserve, default is EXTERNAL.
   * EXTERNAL indicates public/external single IP address.
   * INTERNAL indicates internal IP ranges belonging to some network.
+
+* `purpose` -
+  (Optional)
+  The purpose of the resource. For global internal addresses it can be
+  * VPC_PEERING - for peer networks
+  This should only be set when using an Internal address.
+
+* `network` -
+  (Optional)
+  The URL of the network in which to reserve the IP range. The IP range
+  must be in RFC1918 space. The network cannot be deleted if there are
+  any reserved IP ranges referring to it.
+  This should only be set when using an Internal address.
 
 * `project` - (Optional) The ID of the project in which the resource belongs.
     If it is not provided, the provider project is used.
@@ -119,3 +139,7 @@ $ terraform import google_compute_global_address.default {{name}}
 
 -> If you're importing a resource with beta features, make sure to include `-provider=google-beta`
 as an argument so that Terraform uses the correct provider to import your resource.
+
+## User Project Overrides
+
+This resource supports [User Project Overrides](https://www.terraform.io/docs/providers/google/guides/provider_reference.html#user_project_override).

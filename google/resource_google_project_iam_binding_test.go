@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/acctest"
-	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 )
 
 func projectIamBindingImportStep(resourceName, pid, role string) resource.TestStep {
@@ -186,6 +186,33 @@ func TestAccProjectIamBinding_remove(t *testing.T) {
 	})
 }
 
+// Test that an IAM binding with no members can be applied to a project
+func TestAccProjectIamBinding_noMembers(t *testing.T) {
+	t.Parallel()
+
+	org := getTestOrgFromEnv(t)
+	pid := "terraform-" + acctest.RandString(10)
+	role := "roles/compute.instanceAdmin"
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			// Create a new project
+			{
+				Config: testAccProject_create(pid, pname, org),
+				Check: resource.ComposeTestCheckFunc(
+					testAccProjectExistingPolicy(pid),
+				),
+			},
+			// Apply an IAM binding
+			{
+				Config: testAccProjectAssociateBindingNoMembers(pid, pname, org, role),
+			},
+			projectIamBindingImportStep("google_project_iam_binding.acceptance", pid, role),
+		},
+	})
+}
+
 func testAccProjectAssociateBindingBasic(pid, name, org, role string) string {
 	return fmt.Sprintf(`
 resource "google_project" "acceptance" {
@@ -195,7 +222,7 @@ resource "google_project" "acceptance" {
 }
 
 resource "google_project_iam_binding" "acceptance" {
-  project = "${google_project.acceptance.project_id}"
+  project = google_project.acceptance.project_id
   members = ["user:admin@hashicorptest.com"]
   role    = "%s"
 }
@@ -211,13 +238,13 @@ resource "google_project" "acceptance" {
 }
 
 resource "google_project_iam_binding" "acceptance" {
-  project = "${google_project.acceptance.project_id}"
+  project = google_project.acceptance.project_id
   members = ["user:admin@hashicorptest.com"]
   role    = "%s"
 }
 
 resource "google_project_iam_binding" "multiple" {
-  project = "${google_project.acceptance.project_id}"
+  project = google_project.acceptance.project_id
   members = ["user:paddy@hashicorp.com"]
   role    = "%s"
 }
@@ -233,7 +260,7 @@ resource "google_project" "acceptance" {
 }
 
 resource "google_project_iam_binding" "acceptance" {
-  project = "${google_project.acceptance.project_id}"
+  project = google_project.acceptance.project_id
   members = ["user:admin@hashicorptest.com", "user:paddy@hashicorp.com"]
   role    = "%s"
 }
@@ -249,8 +276,24 @@ resource "google_project" "acceptance" {
 }
 
 resource "google_project_iam_binding" "acceptance" {
-  project = "${google_project.acceptance.project_id}"
+  project = google_project.acceptance.project_id
   members = ["user:paddy@hashicorp.com"]
+  role    = "%s"
+}
+`, pid, name, org, role)
+}
+
+func testAccProjectAssociateBindingNoMembers(pid, name, org, role string) string {
+	return fmt.Sprintf(`
+resource "google_project" "acceptance" {
+  project_id = "%s"
+  name       = "%s"
+  org_id     = "%s"
+}
+
+resource "google_project_iam_binding" "acceptance" {
+  project = google_project.acceptance.project_id
+  members = []
   role    = "%s"
 }
 `, pid, name, org, role)

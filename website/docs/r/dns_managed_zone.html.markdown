@@ -12,6 +12,7 @@
 #     .github/CONTRIBUTING.md.
 #
 # ----------------------------------------------------------------------------
+subcategory: "Cloud DNS"
 layout: "google"
 page_title: "Google: google_dns_managed_zone"
 sidebar_current: "docs-google-dns-managed-zone"
@@ -43,8 +44,8 @@ To get more information about ManagedZone, see:
 
 ```hcl
 resource "google_dns_managed_zone" "example-zone" {
-  name = "example-zone"
-  dns_name = "example-${random_id.rnd.hex}.com."
+  name        = "example-zone"
+  dns_name    = "example-${random_id.rnd.hex}.com."
   description = "Example DNS zone"
   labels = {
     foo = "bar"
@@ -65,8 +66,8 @@ resource "random_id" "rnd" {
 
 ```hcl
 resource "google_dns_managed_zone" "private-zone" {
-  name = "private-zone"
-  dns_name = "private.example.com."
+  name        = "private-zone"
+  dns_name    = "private.example.com."
   description = "Example private DNS zone"
   labels = {
     foo = "bar"
@@ -76,21 +77,21 @@ resource "google_dns_managed_zone" "private-zone" {
 
   private_visibility_config {
     networks {
-      network_url =  "${google_compute_network.network-1.self_link}"
+      network_url = google_compute_network.network-1.self_link
     }
     networks {
-      network_url =  "${google_compute_network.network-2.self_link}"
+      network_url = google_compute_network.network-2.self_link
     }
   }
 }
 
 resource "google_compute_network" "network-1" {
-  name = "network-1"
+  name                    = "network-1"
   auto_create_subnetworks = false
 }
 
 resource "google_compute_network" "network-2" {
-  name = "network-2"
+  name                    = "network-2"
   auto_create_subnetworks = false
 }
 ```
@@ -99,9 +100,9 @@ resource "google_compute_network" "network-2" {
 
 ```hcl
 resource "google_dns_managed_zone" "private-zone" {
-  provider = "google-beta"
-  name = "private-zone"
-  dns_name = "private.example.com."
+  provider    = google-beta
+  name        = "private-zone"
+  dns_name    = "private.example.com."
   description = "Example private DNS zone"
   labels = {
     foo = "bar"
@@ -111,10 +112,10 @@ resource "google_dns_managed_zone" "private-zone" {
 
   private_visibility_config {
     networks {
-      network_url =  "${google_compute_network.network-1.self_link}"
+      network_url = google_compute_network.network-1.self_link
     }
     networks {
-      network_url =  "${google_compute_network.network-2.self_link}"
+      network_url = google_compute_network.network-2.self_link
     }
   }
 
@@ -126,16 +127,15 @@ resource "google_dns_managed_zone" "private-zone" {
       ipv4_address = "172.16.1.20"
     }
   }
-
 }
 
 resource "google_compute_network" "network-1" {
-  name = "network-1"
+  name                    = "network-1"
   auto_create_subnetworks = false
 }
 
 resource "google_compute_network" "network-2" {
-  name = "network-2"
+  name                    = "network-2"
   auto_create_subnetworks = false
 }
 ```
@@ -149,38 +149,38 @@ resource "google_compute_network" "network-2" {
 
 ```hcl
 resource "google_dns_managed_zone" "peering-zone" {
-  provider = "google-beta"
+  provider = google-beta
 
-  name = "peering-zone"
-  dns_name = "peering.example.com."
+  name        = "peering-zone"
+  dns_name    = "peering.example.com."
   description = "Example private DNS peering zone"
 
   visibility = "private"
 
   private_visibility_config {
     networks {
-      network_url =  "${google_compute_network.network-source.self_link}"
+      network_url = google_compute_network.network-source.self_link
     }
   }
 
   peering_config {
     target_network {
-      network_url = "${google_compute_network.network-target.self_link}"
+      network_url = google_compute_network.network-target.self_link
     }
   }
 }
 
 resource "google_compute_network" "network-source" {
-  provider = "google-beta"
+  provider = google-beta
 
-  name = "network-source"
+  name                    = "network-source"
   auto_create_subnetworks = false
 }
 
 resource "google_compute_network" "network-target" {
-  provider = "google-beta"
+  provider = google-beta
 
-  name = "network-target"
+  name                    = "network-target"
   auto_create_subnetworks = false
 }
 
@@ -212,6 +212,10 @@ The following arguments are supported:
   (Optional)
   A textual description field. Defaults to 'Managed by Terraform'.
 
+* `dnssec_config` -
+  (Optional)
+  DNSSEC configuration  Structure is documented below.
+
 * `labels` -
   (Optional)
   A set of key/value label pairs to assign to this ManagedZone.
@@ -231,10 +235,54 @@ The following arguments are supported:
     If it is not provided, the provider project is used.
 
 
+The `dnssec_config` block supports:
+
+* `kind` -
+  (Optional)
+  Identifies what kind of resource this is
+
+* `non_existence` -
+  (Optional)
+  Specifies the mechanism used to provide authenticated denial-of-existence responses.
+
+* `state` -
+  (Optional)
+  Specifies whether DNSSEC is enabled, and what mode it is in
+
+* `default_key_specs` -
+  (Optional)
+  Specifies parameters that will be used for generating initial DnsKeys
+  for this ManagedZone. If you provide a spec for keySigning or zoneSigning,
+  you must also provide one for the other.  Structure is documented below.
+
+
+The `default_key_specs` block supports:
+
+* `algorithm` -
+  (Optional)
+  String mnemonic specifying the DNSSEC algorithm of this key
+
+* `key_length` -
+  (Optional)
+  Length of the keys in bits
+
+* `key_type` -
+  (Optional)
+  Specifies whether this is a key signing key (KSK) or a zone
+  signing key (ZSK). Key signing keys have the Secure Entry
+  Point flag set and, when active, will only be used to sign
+  resource record sets of type DNSKEY. Zone signing keys do
+  not have the Secure Entry Point flag set and will be used
+  to sign all other types of resource record sets.
+
+* `kind` -
+  (Optional)
+  Identifies what kind of resource this is
+
 The `private_visibility_config` block supports:
 
 * `networks` -
-  (Optional)
+  (Required)
   The list of VPC networks that can see this zone. Until the provider updates to use the Terraform 0.12 SDK in a future release, you
   may experience issues with this resource while updating. If you've defined a `networks` block and
   add another `networks` block while keeping the old block, Terraform will see an incorrect diff
@@ -245,7 +293,7 @@ The `private_visibility_config` block supports:
 The `networks` block supports:
 
 * `network_url` -
-  (Optional)
+  (Required)
   The fully qualified URL of the VPC network to bind to.
   This should be formatted like
   `https://www.googleapis.com/compute/v1/projects/{project}/global/networks/{network}`
@@ -281,3 +329,7 @@ $ terraform import google_dns_managed_zone.default {{name}}
 
 -> If you're importing a resource with beta features, make sure to include `-provider=google-beta`
 as an argument so that Terraform uses the correct provider to import your resource.
+
+## User Project Overrides
+
+This resource supports [User Project Overrides](https://www.terraform.io/docs/providers/google/guides/provider_reference.html#user_project_override).

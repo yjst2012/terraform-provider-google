@@ -2,18 +2,22 @@ package google
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/helper/acctest"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
-	"google.golang.org/api/compute/v1"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	computeBeta "google.golang.org/api/compute/v0.beta"
 )
 
 func TestAccComputeNetworkPeering_basic(t *testing.T) {
 	t.Parallel()
+	var peering_beta computeBeta.NetworkPeering
 
-	var peering compute.NetworkPeering
+	primaryNetworkName := acctest.RandomWithPrefix("network-test-1")
+	peeringName := acctest.RandomWithPrefix("peering-test-1")
+	importId := fmt.Sprintf("%s/%s/%s", getTestProjectFromEnv(), primaryNetworkName, peeringName)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -21,13 +25,19 @@ func TestAccComputeNetworkPeering_basic(t *testing.T) {
 		CheckDestroy: testAccComputeNetworkPeeringDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccComputeNetworkPeering_basic(),
+				Config: testAccComputeNetworkPeering_basic(primaryNetworkName, peeringName),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckComputeNetworkPeeringExist("google_compute_network_peering.foo", &peering),
-					testAccCheckComputeNetworkPeeringAutoCreateRoutes(true, &peering),
-					testAccCheckComputeNetworkPeeringExist("google_compute_network_peering.bar", &peering),
-					testAccCheckComputeNetworkPeeringAutoCreateRoutes(true, &peering),
+					testAccCheckComputeNetworkPeeringExist("google_compute_network_peering.foo", &peering_beta),
+					testAccCheckComputeNetworkPeeringAutoCreateRoutes(true, &peering_beta),
+					testAccCheckComputeNetworkPeeringExist("google_compute_network_peering.bar", &peering_beta),
+					testAccCheckComputeNetworkPeeringAutoCreateRoutes(true, &peering_beta),
 				),
+			},
+			{
+				ResourceName:      "google_compute_network_peering.foo",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateId:     importId,
 			},
 		},
 	})
@@ -42,7 +52,7 @@ func testAccComputeNetworkPeeringDestroy(s *terraform.State) error {
 			continue
 		}
 
-		_, err := config.clientCompute.Networks.Get(
+		_, err := config.clientComputeBeta.Networks.Get(
 			config.Project, rs.Primary.ID).Do()
 		if err == nil {
 			return fmt.Errorf("Network peering still exists")
@@ -52,7 +62,7 @@ func testAccComputeNetworkPeeringDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckComputeNetworkPeeringExist(n string, peering *compute.NetworkPeering) resource.TestCheckFunc {
+func testAccCheckComputeNetworkPeeringExist(n string, peering *computeBeta.NetworkPeering) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -72,7 +82,7 @@ func testAccCheckComputeNetworkPeeringExist(n string, peering *compute.NetworkPe
 
 		networkName, peeringName := parts[0], parts[1]
 
-		network, err := config.clientCompute.Networks.Get(config.Project, networkName).Do()
+		network, err := config.clientComputeBeta.Networks.Get(config.Project, networkName).Do()
 		if err != nil {
 			return err
 		}
@@ -87,39 +97,40 @@ func testAccCheckComputeNetworkPeeringExist(n string, peering *compute.NetworkPe
 	}
 }
 
-func testAccCheckComputeNetworkPeeringAutoCreateRoutes(v bool, peering *compute.NetworkPeering) resource.TestCheckFunc {
+func testAccCheckComputeNetworkPeeringAutoCreateRoutes(v bool, peering *computeBeta.NetworkPeering) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		if peering.AutoCreateRoutes != v {
-			return fmt.Errorf("should AutoCreateRoutes set to %t", v)
-		}
 
+		if peering.ExchangeSubnetRoutes != v {
+			return fmt.Errorf("should ExchangeSubnetRouts set to %t if AutoCreateRoutes is set to %t", v, v)
+		}
 		return nil
 	}
 }
 
-func testAccComputeNetworkPeering_basic() string {
-	return fmt.Sprintf(`
+func testAccComputeNetworkPeering_basic(primaryNetworkName, peeringName string) string {
+	s := `
 resource "google_compute_network" "network1" {
-	name = "network-test-1-%s"
-	auto_create_subnetworks = false
-}
-
-resource "google_compute_network" "network2" {
-	name = "network-test-2-%s"
-	auto_create_subnetworks = false
+  name                    = "%s"
+  auto_create_subnetworks = false
 }
 
 resource "google_compute_network_peering" "foo" {
-	name = "peering-test-1-%s"
-	network = "${google_compute_network.network1.self_link}"
-	peer_network = "${google_compute_network.network2.self_link}"
+  name         = "%s"
+  network      = google_compute_network.network1.self_link
+  peer_network = google_compute_network.network2.self_link
+}
+
+resource "google_compute_network" "network2" {
+  name                    = "network-test-2-%s"
+  auto_create_subnetworks = false
 }
 
 resource "google_compute_network_peering" "bar" {
-	name = "peering-test-2-%s"
-	auto_create_routes = true
-	network = "${google_compute_network.network2.self_link}"
-	peer_network = "${google_compute_network.network1.self_link}"
-}
-`, acctest.RandString(10), acctest.RandString(10), acctest.RandString(10), acctest.RandString(10))
+  network      = google_compute_network.network2.self_link
+  peer_network = google_compute_network.network1.self_link
+  name         = "peering-test-2-%s"
+`
+
+	s = s + `}`
+	return fmt.Sprintf(s, primaryNetworkName, peeringName, acctest.RandString(10), acctest.RandString(10))
 }

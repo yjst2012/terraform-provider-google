@@ -19,9 +19,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/acctest"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func TestAccComputeGlobalForwardingRule_globalForwardingRuleHttpExample(t *testing.T) {
@@ -51,21 +51,21 @@ func TestAccComputeGlobalForwardingRule_globalForwardingRuleHttpExample(t *testi
 func testAccComputeGlobalForwardingRule_globalForwardingRuleHttpExample(context map[string]interface{}) string {
 	return Nprintf(`
 resource "google_compute_global_forwarding_rule" "default" {
-  name       = "global-rule-%{random_suffix}"
-  target     = "${google_compute_target_http_proxy.default.self_link}"
+  name       = "global-rule%{random_suffix}"
+  target     = google_compute_target_http_proxy.default.self_link
   port_range = "80"
 }
 
 resource "google_compute_target_http_proxy" "default" {
-  name        = "target-proxy-%{random_suffix}"
+  name        = "target-proxy%{random_suffix}"
   description = "a description"
-  url_map     = "${google_compute_url_map.default.self_link}"
+  url_map     = google_compute_url_map.default.self_link
 }
 
 resource "google_compute_url_map" "default" {
-  name            = "url-map-target-proxy-%{random_suffix}"
+  name            = "url-map-target-proxy%{random_suffix}"
   description     = "a description"
-  default_service = "${google_compute_backend_service.default.self_link}"
+  default_service = google_compute_backend_service.default.self_link
 
   host_rule {
     hosts        = ["mysite.com"]
@@ -74,26 +74,26 @@ resource "google_compute_url_map" "default" {
 
   path_matcher {
     name            = "allpaths"
-    default_service = "${google_compute_backend_service.default.self_link}"
+    default_service = google_compute_backend_service.default.self_link
 
     path_rule {
       paths   = ["/*"]
-      service = "${google_compute_backend_service.default.self_link}"
+      service = google_compute_backend_service.default.self_link
     }
   }
 }
 
 resource "google_compute_backend_service" "default" {
-  name        = "backend-%{random_suffix}"
+  name        = "backend%{random_suffix}"
   port_name   = "http"
   protocol    = "HTTP"
   timeout_sec = 10
 
-  health_checks = ["${google_compute_http_health_check.default.self_link}"]
+  health_checks = [google_compute_http_health_check.default.self_link]
 }
 
 resource "google_compute_http_health_check" "default" {
-  name               = "check-backend-%{random_suffix}"
+  name               = "check-backend%{random_suffix}"
   request_path       = "/"
   check_interval_sec = 1
   timeout_sec        = 1
@@ -112,12 +112,12 @@ func testAccCheckComputeGlobalForwardingRuleDestroy(s *terraform.State) error {
 
 		config := testAccProvider.Meta().(*Config)
 
-		url, err := replaceVarsForTest(rs, "https://www.googleapis.com/compute/v1/projects/{{project}}/global/forwardingRules/{{name}}")
+		url, err := replaceVarsForTest(config, rs, "{{ComputeBasePath}}projects/{{project}}/global/forwardingRules/{{name}}")
 		if err != nil {
 			return err
 		}
 
-		_, err = sendRequest(config, "GET", url, nil)
+		_, err = sendRequest(config, "GET", "", url, nil)
 		if err == nil {
 			return fmt.Errorf("ComputeGlobalForwardingRule still exists at %s", url)
 		}

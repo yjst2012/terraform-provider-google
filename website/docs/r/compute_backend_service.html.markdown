@@ -12,6 +12,7 @@
 #     .github/CONTRIBUTING.md.
 #
 # ----------------------------------------------------------------------------
+subcategory: "Compute Engine"
 layout: "google"
 page_title: "Google: google_compute_backend_service"
 sidebar_current: "docs-google-compute-backend-service"
@@ -24,8 +25,10 @@ description: |-
 
 A Backend Service defines a group of virtual machines that will serve
 traffic for load balancing. This resource is a global backend service,
-appropriate for external load balancing. For internal load balancing, use
-a regional backend service instead.
+appropriate for external load balancing or self-managed internal load balancing.
+For managed internal load balancing, use a regional backend service instead.
+
+Currently self-managed internal load balancing is only available in beta.
 
 
 To get more information about BackendService, see:
@@ -45,7 +48,7 @@ To get more information about BackendService, see:
 ```hcl
 resource "google_compute_backend_service" "default" {
   name          = "backend-service"
-  health_checks = ["${google_compute_http_health_check.default.self_link}"]
+  health_checks = [google_compute_http_health_check.default.self_link]
 }
 
 resource "google_compute_http_health_check" "default" {
@@ -53,6 +56,76 @@ resource "google_compute_http_health_check" "default" {
   request_path       = "/"
   check_interval_sec = 1
   timeout_sec        = 1
+}
+```
+<div class = "oics-button" style="float: right; margin: 0 0 -15px">
+  <a href="https://console.cloud.google.com/cloudshell/open?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fterraform-google-modules%2Fdocs-examples.git&cloudshell_working_dir=backend_service_traffic_director_round_robin&cloudshell_image=gcr.io%2Fgraphite-cloud-shell-images%2Fterraform%3Alatest&open_in_editor=main.tf&cloudshell_print=.%2Fmotd&cloudshell_tutorial=.%2Ftutorial.md" target="_blank">
+    <img alt="Open in Cloud Shell" src="//gstatic.com/cloudssh/images/open-btn.svg" style="max-height: 44px; margin: 32px auto; max-width: 100%;">
+  </a>
+</div>
+## Example Usage - Backend Service Traffic Director Round Robin
+
+
+```hcl
+resource "google_compute_backend_service" "default" {
+  provider = google-beta
+
+  name                  = "backend-service"
+  health_checks         = [google_compute_health_check.health_check.self_link]
+  load_balancing_scheme = "INTERNAL_SELF_MANAGED"
+  locality_lb_policy    = "ROUND_ROBIN"
+}
+
+resource "google_compute_health_check" "health_check" {
+  provider = google-beta
+
+  name = "health-check"
+  http_health_check {
+    port = 80
+  }
+}
+```
+<div class = "oics-button" style="float: right; margin: 0 0 -15px">
+  <a href="https://console.cloud.google.com/cloudshell/open?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fterraform-google-modules%2Fdocs-examples.git&cloudshell_working_dir=backend_service_traffic_director_ring_hash&cloudshell_image=gcr.io%2Fgraphite-cloud-shell-images%2Fterraform%3Alatest&open_in_editor=main.tf&cloudshell_print=.%2Fmotd&cloudshell_tutorial=.%2Ftutorial.md" target="_blank">
+    <img alt="Open in Cloud Shell" src="//gstatic.com/cloudssh/images/open-btn.svg" style="max-height: 44px; margin: 32px auto; max-width: 100%;">
+  </a>
+</div>
+## Example Usage - Backend Service Traffic Director Ring Hash
+
+
+```hcl
+resource "google_compute_backend_service" "default" {
+  provider = google-beta
+
+  name                  = "backend-service"
+  health_checks         = [google_compute_health_check.health_check.self_link]
+  load_balancing_scheme = "INTERNAL_SELF_MANAGED"
+  locality_lb_policy    = "RING_HASH"
+  session_affinity      = "HTTP_COOKIE"
+  circuit_breakers {
+    max_connections = 10
+  }
+  consistent_hash {
+    http_cookie {
+      ttl {
+        seconds = 11
+        nanos   = 1111
+      }
+      name = "mycookie"
+    }
+  }
+  outlier_detection {
+    consecutive_errors = 2
+  }
+}
+
+resource "google_compute_health_check" "health_check" {
+  provider = google-beta
+
+  name = "health-check"
+  http_health_check {
+    port = 80
+  }
 }
 ```
 
@@ -63,9 +136,10 @@ The following arguments are supported:
 
 * `health_checks` -
   (Required)
-  The list of URLs to the HttpHealthCheck or HttpsHealthCheck resource
+  The set of URLs to the HttpHealthCheck or HttpsHealthCheck resource
   for health checking this BackendService. Currently at most one health
   check can be specified, and a health check is required.
+  For internal load balancing, a URL to a HealthCheck resource must be specified instead.
 
 * `name` -
   (Required)
@@ -91,7 +165,7 @@ The following arguments are supported:
 
 * `backend` -
   (Optional)
-  The list of backends that serve this BackendService.  Structure is documented below.
+  The set of backends that serve this BackendService.  Structure is documented below.
 
 * `cdn_policy` -
   (Optional)
@@ -118,8 +192,8 @@ The following arguments are supported:
   (Optional)
   Indicates whether the backend service will be used with internal or
   external load balancing. A backend service created for one type of
-  load balancing cannot be used with the other. Must be `EXTERNAL` for
-  a global backend service. Defaults to `EXTERNAL`.
+  load balancing cannot be used with the other. Must be `EXTERNAL` or
+  `INTERNAL_SELF_MANAGED` for a global backend service. Defaults to `EXTERNAL`.
 
 * `port_name` -
   (Optional)
@@ -140,10 +214,8 @@ The following arguments are supported:
 
 * `session_affinity` -
   (Optional)
-  Type of session affinity to use. The default is NONE.
-  When the load balancing scheme is EXTERNAL, can be NONE, CLIENT_IP, or
-  GENERATED_COOKIE.
-  When the protocol is UDP, this field is not used.
+  Type of session affinity to use. The default is NONE. Session affinity is
+  not applicable if the protocol is UDP.
 
 * `timeout_sec` -
   (Optional)
@@ -178,7 +250,7 @@ The `backend` block supports:
   Provide this property when you create the resource.
 
 * `group` -
-  (Optional)
+  (Required)
   The fully-qualified URL of an Instance Group or Network Endpoint
   Group resource. In case of instance group this defines the list
   of instances that serve traffic. Member virtual machine
@@ -188,7 +260,7 @@ The `backend` block supports:
   For Network Endpoint Groups this defines list of endpoints. All
   endpoints of Network Endpoint Group must be hosted on instances
   located in the same zone as the Network Endpoint Group.
-  Backend service can not contain mix of Instance Group and
+  Backend services cannot mix Instance Group and
   Network Endpoint Group backends.
   Note that you must specify an Instance Group or Network Endpoint
   Group resource using the fully-qualified URL, rather than a
@@ -198,8 +270,9 @@ The `backend` block supports:
   (Optional)
   The max number of simultaneous connections for the group. Can
   be used with either CONNECTION or UTILIZATION balancing modes.
-  For CONNECTION mode, either maxConnections or
-  maxConnectionsPerInstance must be set.
+  For CONNECTION mode, either maxConnections or one
+  of maxConnectionsPerInstance or maxConnectionsPerEndpoint,
+  as appropriate for group type, must be set.
 
 * `max_connections_per_instance` -
   (Optional)
@@ -210,12 +283,22 @@ The `backend` block supports:
   For CONNECTION mode, either maxConnections or
   maxConnectionsPerInstance must be set.
 
+* `max_connections_per_endpoint` -
+  (Optional)
+  The max number of simultaneous connections that a single backend
+  network endpoint can handle. This is used to calculate the
+  capacity of the group. Can be used in either CONNECTION or
+  UTILIZATION balancing modes.
+  For CONNECTION mode, either
+  maxConnections or maxConnectionsPerEndpoint must be set.
+
 * `max_rate` -
   (Optional)
   The max requests per second (RPS) of the group.
   Can be used with either RATE or UTILIZATION balancing modes,
-  but required if RATE mode. For RATE mode, either maxRate or
-  maxRatePerInstance must be set.
+  but required if RATE mode. For RATE mode, either maxRate or one
+  of maxRatePerInstance or maxRatePerEndpoint, as appropriate for
+  group type, must be set.
 
 * `max_rate_per_instance` -
   (Optional)
@@ -223,6 +306,13 @@ The `backend` block supports:
   instance can handle. This is used to calculate the capacity of
   the group. Can be used in either balancing mode. For RATE mode,
   either maxRate or maxRatePerInstance must be set.
+
+* `max_rate_per_endpoint` -
+  (Optional)
+  The max requests per second (RPS) that a single backend network
+  endpoint can handle. This is used to calculate the capacity of
+  the group. Can be used in either balancing mode. For RATE mode,
+  either maxRate or maxRatePerEndpoint must be set.
 
 * `max_utilization` -
   (Optional)
@@ -332,3 +422,7 @@ $ terraform import google_compute_backend_service.default {{name}}
 
 -> If you're importing a resource with beta features, make sure to include `-provider=google-beta`
 as an argument so that Terraform uses the correct provider to import your resource.
+
+## User Project Overrides
+
+This resource supports [User Project Overrides](https://www.terraform.io/docs/providers/google/guides/provider_reference.html#user_project_override).
