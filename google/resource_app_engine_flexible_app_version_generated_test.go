@@ -29,7 +29,6 @@ func TestAccAppEngineFlexibleAppVersion_appEngineFlexibleAppVersionExample(t *te
 
 	context := map[string]interface{}{
 		"org_id":        getTestOrgFromEnv(t),
-		"billing_acct":  getTestBillingAccountFromEnv(t),
 		"random_suffix": acctest.RandString(10),
 	}
 
@@ -57,7 +56,6 @@ resource "google_project" "my_project" {
   name            = "tf-test-project"
   project_id      = "project%{random_suffix}"
   org_id          = "%{org_id}"
-  billing_account = "%{billing_acct}"
 }
 
 resource "google_app_engine_flexible_app_version" "myapp_v1" {
