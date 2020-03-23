@@ -63,7 +63,7 @@ resource "google_project" "my_project" {
 resource "google_app_engine_flexible_app_version" "myapp_v1" {
   version_id = "v1"
   project    = google_project.my_project.name
-  service    = "tf-test-service-%{random_suffix}"
+  service    = "default"
   runtime    = "nodejs"
 
   entrypoint {

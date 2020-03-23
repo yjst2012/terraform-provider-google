@@ -11,7 +11,6 @@ func TestAccAppEngineFlexibleAppVersion_update(t *testing.T) {
 	t.Parallel()
 
 	context := map[string]interface{}{
-		"service_name": fmt.Sprintf("tf-test-ae-service-%s", acctest.RandString(10)),
 		"project":      fmt.Sprintf("tf-test-project-%s", acctest.RandString(10)),
 		"org_id":       getTestOrgFromEnv(t),
 		"billing_acct": getTestBillingAccountFromEnv(t),
@@ -56,7 +55,7 @@ resource "google_project" "my_project" {
 resource "google_app_engine_flexible_app_version" "foo" {
   project    = google_project.my_project.name
   version_id = "v1"
-  service    = "%{service_name}"
+  service    = "default"
   runtime    = "python"
 
   runtime_api_version = "1"
@@ -116,7 +115,7 @@ resource "google_app_engine_flexible_app_version" "foo" {
 
 resource "google_storage_bucket" "bucket" {
   project = google_project.my_project.project_id
-  name    = "%{service_name}-bucket"
+  name    = "tf-test-app-engine-flex-bucket"
 }
 
 resource "google_storage_bucket_object" "yaml" {
@@ -150,7 +149,7 @@ resource "google_project" "my_project" {
 resource "google_app_engine_flexible_app_version" "foo" {
   project    = google_project.my_project.name
   version_id = "v1"
-  service    = "%{service_name}"
+  service    = "default"
   runtime    = "python"
 
   runtime_api_version = "1"
@@ -210,7 +209,7 @@ resource "google_app_engine_flexible_app_version" "foo" {
 
 resource "google_storage_bucket" "bucket" {
   project = google_project.my_project.project_id
-  name    = "%{service_name}-bucket"
+  name    = "tf-test-app-engine-flex-bucket"
 }
 
 resource "google_storage_bucket_object" "yaml" {
