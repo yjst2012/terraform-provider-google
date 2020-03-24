@@ -480,7 +480,7 @@ func updateProjectBillingAccount(d *schema.ResourceData, config *Config) error {
 		if baName == name {
 			return nil
 		}
-		time.Sleep(3 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	return fmt.Errorf("Timed out waiting for billing account to return correct value.  Waiting for %s, got %s.",
 		name, strings.TrimPrefix(ba.BillingAccountName, "billingAccounts/"))
