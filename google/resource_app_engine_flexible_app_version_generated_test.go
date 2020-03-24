@@ -54,7 +54,6 @@ func TestAccAppEngineFlexibleAppVersion_appEngineFlexibleAppVersionExample(t *te
 func testAccAppEngineFlexibleAppVersion_appEngineFlexibleAppVersionExample(context map[string]interface{}) string {
 	return Nprintf(`
 resource "google_project" "my_project" {
-  name            = "tf-test-project"
   project_id      = "project%{random_suffix}"
   org_id          = "%{org_id}"
   billing_account = "%{billing_acct}"
