@@ -58,7 +58,7 @@ resource "google_app_engine_application" "app" {
 }
 
 resource "google_app_engine_flexible_app_version" "foo" {
-  project    = google_project.my_project.name
+  project    = google_app_engine_application.app.id
   version_id = "v1"
   service    = "default"
   runtime    = "python"
@@ -157,7 +157,7 @@ resource "google_app_engine_application" "app" {
 }
 
 resource "google_app_engine_flexible_app_version" "foo" {
-  project    = google_project.my_project.name
+  project    = google_app_engine_application.app.id
   version_id = "v1"
   service    = "default"
   runtime    = "python"
