@@ -54,6 +54,7 @@ func TestAccAppEngineFlexibleAppVersion_appEngineFlexibleAppVersionExample(t *te
 func testAccAppEngineFlexibleAppVersion_appEngineFlexibleAppVersionExample(context map[string]interface{}) string {
 	return Nprintf(`
 resource "google_project" "my_project" {
+  name            = "project%{random_suffix}"
   project_id      = "project%{random_suffix}"
   org_id          = "%{org_id}"
   billing_account = "%{billing_acct}"
@@ -61,7 +62,7 @@ resource "google_project" "my_project" {
 
 resource "google_app_engine_flexible_app_version" "myapp_v1" {
   version_id = "v1"
-  project    = google_project.my_project.name
+  project    = google_project.my_project.project_id
   service    = "default"
   runtime    = "nodejs"
 

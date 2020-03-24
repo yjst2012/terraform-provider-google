@@ -46,6 +46,7 @@ func TestAccAppEngineFlexibleAppVersion_update(t *testing.T) {
 func testAccAppEngineFlexibleAppVersion_python(context map[string]interface{}) string {
 	return Nprintf(`
 resource "google_project" "my_project" {
+  name.           = "%{project}"
   project_id      = "%{project}"
   org_id          = "%{org_id}"
   billing_account = "%{billing_acct}"
@@ -139,6 +140,7 @@ resource "google_storage_bucket_object" "main" {
 func testAccAppEngineFlexibleAppVersion_pythonUpdate(context map[string]interface{}) string {
 	return Nprintf(`
 resource "google_project" "my_project" {
+  name            = "%{project_id}"
   project_id      = "%{project}"
   org_id          = "%{org_id}"
   billing_account = "%{billing_acct}"
