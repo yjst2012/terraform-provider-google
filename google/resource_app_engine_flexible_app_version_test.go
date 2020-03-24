@@ -52,6 +52,11 @@ resource "google_project" "my_project" {
   billing_account = "%{billing_acct}"
 }
 
+resource "google_app_engine_application" "app" {
+  project     = google_project.my_project.project_id
+  location_id = "us-central"
+}
+
 resource "google_app_engine_flexible_app_version" "foo" {
   project    = google_project.my_project.name
   version_id = "v1"
@@ -144,6 +149,11 @@ resource "google_project" "my_project" {
   project_id      = "%{project}"
   org_id          = "%{org_id}"
   billing_account = "%{billing_acct}"
+}
+
+resource "google_app_engine_application" "app" {
+  project     = google_project.my_project.project_id
+  location_id = "us-central"
 }
 
 resource "google_app_engine_flexible_app_version" "foo" {

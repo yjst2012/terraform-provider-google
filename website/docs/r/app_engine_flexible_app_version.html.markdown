@@ -50,6 +50,11 @@ resource "google_project" "my_project" {
   billing_account = "000000-0000000-0000000-000000"
 }
 
+resource "google_app_engine_application" "app" {
+  project     = google_project.my_project.project_id
+  location_id = "us-central"
+}
+
 resource "google_app_engine_flexible_app_version" "myapp_v1" {
   version_id = "v1"
   project    = google_project.my_project.name
